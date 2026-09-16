@@ -15,7 +15,6 @@ class RibolaHRSpider(WpGoMapsSpider):
     }
     allowed_domains = ["ribola.hr"]
     map_id = 4
-    requires_proxy = "HR"
 
     def post_process_item(self, item: Feature, location: dict) -> Iterable[Feature]:
         if name := item.pop("name"):
