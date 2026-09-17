@@ -1087,6 +1087,15 @@ def _normalise_hour_over_24(value: str) -> tuple[str, bool]:
     return f"{hour_int - 24:02d}{sep}{rest}", True
 
 
+def _time_of_day(t: time.struct_time) -> tuple[int, int]:
+    """
+    Hour and minute of a time, ignoring the date components which callers
+    supplying a struct_time may have filled in with a real date rather than
+    the 1900-01-01 default that time.strptime uses for a bare clock time.
+    """
+    return t.tm_hour, t.tm_min
+
+
 class OpeningHours:
     def __init__(self):
         self.day_hours = defaultdict(set)
@@ -1242,13 +1251,23 @@ class OpeningHours:
             if day in self.days_closed:
                 hours = "closed"
             else:
+                # Sources often split a continuous day into consecutive ranges,
+                # e.g. 08:00-12:00 and 12:00-17:30 for a shop with no lunch
+                # break. Join ranges which meet, so that a day without a break
+                # is not published as if it had one.
+                merged_hours = []
+                for h in sorted(day_hours_midnight_split[day], key=lambda r: (_time_of_day(r[0]), _time_of_day(r[1]))):
+                    if merged_hours and _time_of_day(merged_hours[-1][1]) == _time_of_day(h[0]):
+                        merged_hours[-1] = (merged_hours[-1][0], h[1])
+                    else:
+                        merged_hours.append(h)
                 hours = ",".join(
                     "%s-%s"
                     % (
                         time.strftime("%H:%M", h[0]),
                         time.strftime("%H:%M", h[1]).replace("23:59", "24:00"),
                     )
-                    for h in sorted(day_hours_midnight_split[day])
+                    for h in merged_hours
                 )
 
             if not this_day_group:

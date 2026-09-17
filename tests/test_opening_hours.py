@@ -135,6 +135,35 @@ def test_multiple_times():
     assert o3.as_opening_hours() == "Tu 09:00-12:00,15:00-17:00"
 
 
+def test_adjacent_times_are_merged():
+    o = OpeningHours()
+    o.add_range("Mo", "08:00", "12:00")
+    o.add_range("Mo", "12:00", "17:30")
+    assert o.as_opening_hours() == "Mo 08:00-17:30"
+
+
+def test_adjacent_times_are_merged_repeatedly():
+    o = OpeningHours()
+    o.add_range("Mo", "08:00", "12:00")
+    o.add_range("Mo", "12:00", "14:00")
+    o.add_range("Mo", "14:00", "18:00")
+    assert o.as_opening_hours() == "Mo 08:00-18:00"
+
+
+def test_non_adjacent_times_are_not_merged():
+    o = OpeningHours()
+    o.add_range("Mo", "08:00", "12:00")
+    o.add_range("Mo", "12:01", "17:30")
+    assert o.as_opening_hours() == "Mo 08:00-12:00,12:01-17:30"
+
+
+def test_adjacent_times_are_merged_when_supplied_as_dated_struct_times():
+    o = OpeningHours()
+    o.add_range("Mo", time.strptime("2024-06-03 08:00", "%Y-%m-%d %H:%M"), time.strptime("12:00", "%H:%M"))
+    o.add_range("Mo", "12:00", "17:30")
+    assert o.as_opening_hours() == "Mo 08:00-17:30"
+
+
 def test_simple_over_midnight():
     o = OpeningHours()
     o.add_range("Mo", "07:00", "02:00")
