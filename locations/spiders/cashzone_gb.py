@@ -109,8 +109,8 @@ class CashzoneGBSpider(Spider):
         item["city"] = atm.get("City")
         item["postcode"] = atm.get("ZipCode")
         if self.misplaced_in_ireland(item):
-            # ~1,090 ATMs with UK addresses are placed around Donegal Bay or
-            # Monaghan; drop the bogus point and keep the address.
+            # ~1,190 ATMs (nearly all Santander) with GB addresses are placed
+            # across the island of Ireland; drop the bogus point, keep the address.
             self.crawler.stats.inc_value("cashzone_gb/misplaced_in_ireland")
             item["lat"] = item["lon"] = None
         if atm.get("CUSpecific") == "Internal":
@@ -124,6 +124,9 @@ class CashzoneGBSpider(Spider):
         if item["lon"] < UK_WESTERN_LIMIT:
             return True
         if (item["postcode"] or "").upper().startswith("BT"):
-            # Reverse geocoding is unreliable along the Northern Ireland border.
+            # A Northern Ireland postcode belongs on the island; reverse geocoding
+            # is unreliable along the border, so don't second-guess it there.
             return False
-        return reverse_geocoder.get((item["lat"], item["lon"]), mode=1, verbose=False)["cc"] == "IE"
+        # Any other UK postcode is in Great Britain or the Crown Dependencies.
+        place = reverse_geocoder.get((item["lat"], item["lon"]), mode=1, verbose=False)
+        return place["cc"] == "IE" or place["admin1"] == "Northern Ireland"
