@@ -16,10 +16,20 @@ class ShellSpider(GeoMeSpider):
     name = "shell"
     item_attributes = {"brand": "Shell", "brand_wikidata": "Q110716465"}
     api_key = "shellgsllocator"
+    # The "cf" (commercial fleet) API also includes truck-only sites, which the retail API omits.
+    url_within_bounds_template = (
+        "https://{}.geoapp.me/api/v{}/cf/locations/within_bounds?sw[]={}&sw[]={}&ne[]={}&ne[]={}"
+    )
+    url_nearest_to_template = "https://{}.geoapp.me/api/v{}/cf/locations/nearest_to?lat={}&lng={}&limit=50"
 
     def parse_item(self, item, location):
+        # The cf API also returns partner sites of other brands (e.g. Esso) accepting Shell fleet cards.
+        if location.get("partner"):
+            return
+
         # Definitions extracted from https://shellgsllocator.geoapp.me/config/published/retail/prod/en_US.json?format=json
-        amenities = location["amenities"]
+        # The cf API moves truck related amenities (hgv_lane, adblue_truck, ...) to a separate list.
+        amenities = location["amenities"] + (location.get("truck_services") or [])
         fuels = location["fuels"]
 
         # As we know the name of the shop attached we create its own POI
